@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func newConnector(ssid, password string) connector {
-	return connector{ssid: ssid, password: password}
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	return connector{ssid: ssid, password: password, spinner: s}
 }
 
 type connector struct {
@@ -16,10 +19,11 @@ type connector struct {
 	password string
 	error    string
 	message  string
+	spinner  spinner.Model
 }
 
 func (c connector) Init() tea.Cmd {
-	return c.connect
+	return tea.Batch(c.connect, c.spinner.Tick)
 }
 
 func (c connector) Update(msg tea.Msg) (connector, tea.Cmd) {
@@ -29,7 +33,9 @@ func (c connector) Update(msg tea.Msg) (connector, tea.Cmd) {
 	if _, ok := msg.(connectSucceeded); ok {
 		c.message = "Connected!"
 	}
-	return c, nil
+	var cmd tea.Cmd
+	c.spinner, cmd = c.spinner.Update(msg)
+	return c, cmd
 }
 
 func (c connector) View() string {
@@ -39,7 +45,7 @@ func (c connector) View() string {
 	if c.message != "" {
 		return c.message
 	}
-	return fmt.Sprintf("beep boop. connecting to %s with password: %s", c.ssid, c.password)
+	return fmt.Sprintf("%s - connecting", c.spinner.View())
 }
 
 type connectFailed struct {
