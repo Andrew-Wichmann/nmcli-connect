@@ -49,7 +49,7 @@ type connectFailed struct {
 type connectSucceeded struct{}
 
 func (c connector) connect() tea.Msg {
-	cmd := exec.Command("sleep", "10")
+	cmd := exec.Command("nmcli", "device", "wifi", "connect", c.ssid, "password", c.password)
 	_, err := cmd.Output()
 	if err != nil {
 		return connectFailed{err: err}
