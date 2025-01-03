@@ -1,4 +1,4 @@
-module github.com/Andrew-Wichmann/nmcli-selector
+module github.com/Andrew-Wichmann/nmcli-connect
 
 go 1.23.3
 
