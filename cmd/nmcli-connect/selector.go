@@ -6,37 +6,41 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+type selectorState int
+
+const STATE_PENDING selectorState = 1
+const STATE_COMPLETE selectorState = 2
+const STATE_ERROR selectorState = 3
+
 func newSelector() selector {
 	a := selector{}
 	a.table = table.New(table.WithWidth(100), table.WithHeight(50), table.WithFocused(true))
+	a.spinner = spinner.New()
+	a.spinner.Spinner = spinner.Points
+	a.state = STATE_PENDING
 	return a
 }
 
 type selector struct {
-	networks       []network
-	error          string
-	table          table.Model
-	passwordPrompt textinput.Model
-	selected       string
+	networks []network
+	error    string
+	table    table.Model
+	selected string
+	spinner  spinner.Model
+	state    selectorState
 }
 
 func (a selector) Init() tea.Cmd {
-	return run
+	return tea.Batch(run, a.spinner.Tick)
 }
 
 func (a selector) Update(msg tea.Msg) (selector, tea.Cmd) {
-	var cmd tea.Cmd
-	var passwordCommand tea.Cmd
-	var tableCommand tea.Cmd
-	a.table, tableCommand = a.table.Update(msg)
-	a.passwordPrompt, passwordCommand = a.passwordPrompt.Update(msg)
-	cmd = tea.Batch(tableCommand, passwordCommand)
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -53,20 +57,34 @@ func (a selector) Update(msg tea.Msg) (selector, tea.Cmd) {
 		cols := []table.Column{{Title: "In Use", Width: 5}, {Title: "SSID", Width: 50}, {Title: "Signal", Width: 10}}
 		a.table.SetColumns(cols)
 		a.table.SetRows(rows)
+		a.state = STATE_COMPLETE
 	case nmcliFailed:
 		a.error = msg.err.Error()
+		a.state = STATE_ERROR
+	}
+	var cmd tea.Cmd
+	a.table, cmd = a.table.Update(msg)
+	if cmd != nil {
+		return a, cmd
+	}
+	a.spinner, cmd = a.spinner.Update(msg)
+	if cmd != nil {
+		return a, cmd
 	}
 	return a, cmd
 }
 
 func (a selector) View() string {
-	if a.error != "" {
+	if a.state == STATE_PENDING {
+		return a.spinner.View()
+	}
+	if a.state == STATE_ERROR {
 		return a.error
 	}
-	if a.selected != "" {
-		return a.passwordPrompt.View()
+	if a.state == STATE_COMPLETE {
+		return baseStyle.Render(a.table.View())
 	}
-	return baseStyle.Render(a.table.View())
+	panic("unknown state")
 }
 
 type network struct {
