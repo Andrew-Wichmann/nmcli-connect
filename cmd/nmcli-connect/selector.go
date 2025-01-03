@@ -27,8 +27,7 @@ type selector struct {
 }
 
 func (a selector) Init() tea.Cmd {
-	// ...wait. the Init should be the command itself... duh.
-	return func() tea.Msg { return start{} }
+	return run
 }
 
 func (a selector) Update(msg tea.Msg) (selector, tea.Cmd) {
@@ -46,27 +45,16 @@ func (a selector) Update(msg tea.Msg) (selector, tea.Cmd) {
 		case "enter":
 			a.selected = a.table.SelectedRow()[1]
 		}
-
-	case start:
-		cmd := exec.Command("nmcli", "device", "wifi")
-		output, err := cmd.Output()
-		if err != nil {
-			a.error = string(err.Error())
-		} else {
-			networks, err := parseOutput(output)
-			if err != nil {
-				a.error = err.Error()
-			} else {
-				a.networks = networks
-			}
-			rows := make([]table.Row, len(a.networks))
-			for i, network := range a.networks {
-				rows[i] = table.Row{network.inUse, network.ssid, network.signal}
-			}
-			cols := []table.Column{{Title: "In Use", Width: 5}, {Title: "SSID", Width: 50}, {Title: "Signal", Width: 10}}
-			a.table.SetColumns(cols)
-			a.table.SetRows(rows)
+	case nmcliSuccess:
+		rows := make([]table.Row, len(msg.networks))
+		for i, network := range msg.networks {
+			rows[i] = table.Row{network.inUse, network.ssid, network.signal}
 		}
+		cols := []table.Column{{Title: "In Use", Width: 5}, {Title: "SSID", Width: 50}, {Title: "Signal", Width: 10}}
+		a.table.SetColumns(cols)
+		a.table.SetRows(rows)
+	case nmcliFailed:
+		a.error = msg.err.Error()
 	}
 	return a, cmd
 }
@@ -81,12 +69,30 @@ func (a selector) View() string {
 	return baseStyle.Render(a.table.View())
 }
 
-type start struct{}
-
 type network struct {
 	inUse  string
 	ssid   string
 	signal string
+}
+
+type nmcliFailed struct {
+	err error
+}
+type nmcliSuccess struct {
+	networks []network
+}
+
+func run() tea.Msg {
+	cmd := exec.Command("nmcli", "device", "wifi")
+	output, err := cmd.Output()
+	if err != nil {
+		return nmcliFailed{err: err}
+	}
+	networks, err := parseOutput(output)
+	if err != nil {
+		return nmcliFailed{err: err}
+	}
+	return nmcliSuccess{networks: networks}
 }
 
 func parseOutput(output []byte) ([]network, error) {
