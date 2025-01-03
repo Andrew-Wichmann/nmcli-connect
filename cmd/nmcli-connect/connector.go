@@ -10,7 +10,7 @@ import (
 
 func newConnector(ssid, password string) connector {
 	s := spinner.New()
-	s.Spinner = spinner.Dot
+	s.Spinner = spinner.Points
 	return connector{ssid: ssid, password: password, spinner: s}
 }
 

@@ -15,6 +15,7 @@ func newPasswordInput(ssid string) passwordInput {
 	pi := passwordInput{}
 	pi.ti = textinput.New()
 	pi.ti.Prompt = fmt.Sprintf("Password for %s: ", ssid)
+	pi.ti.EchoMode = textinput.EchoPassword
 	pi.ti.Focus()
 	return pi
 }
