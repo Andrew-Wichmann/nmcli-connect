@@ -3,16 +3,24 @@ package main
 import (
 	"fmt"
 	"os/exec"
-	"strconv"
 	"strings"
 	"unicode"
 
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
+
+func newApp() app {
+	a := app{}
+	a.table = table.New(table.WithWidth(100), table.WithHeight(50), table.WithFocused(true))
+	return a
+}
 
 type app struct {
 	networks []network
 	error    string
+	table    table.Model
 }
 
 func (a app) Init() tea.Cmd {
@@ -20,6 +28,8 @@ func (a app) Init() tea.Cmd {
 }
 
 func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	a.table, cmd = a.table.Update(msg)
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -38,28 +48,31 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				a.networks = networks
 			}
+			rows := make([]table.Row, len(a.networks))
+			for i, network := range a.networks {
+				rows[i] = table.Row{network.inUse, network.ssid, network.signal}
+			}
+			cols := []table.Column{{Title: "In Use", Width: 5}, {Title: "SSID", Width: 50}, {Title: "Signal", Width: 10}}
+			a.table.SetColumns(cols)
+			a.table.SetRows(rows)
 		}
 	}
-	return a, nil
+	return a, cmd
 }
 
 func (a app) View() string {
 	if a.error != "" {
 		return a.error
 	}
-	var builder strings.Builder
-	for _, network := range a.networks {
-		builder.WriteString(fmt.Sprintf("isUse: %t, SSID: %s, signal: %d\n", network.inUse, network.ssid, network.signal))
-	}
-	return builder.String()
+	return baseStyle.Render(a.table.View())
 }
 
 type start struct{}
 
 type network struct {
-	inUse  bool
+	inUse  string
 	ssid   string
-	signal int
+	signal string
 }
 
 func parseOutput(output []byte) ([]network, error) {
@@ -86,21 +99,19 @@ func parseOutput(output []byte) ([]network, error) {
 		}
 		prev = c
 	}
-	for _, line := range lines[1 : len(lines)-1] {
+	for _, line := range lines[1 : len(lines)-1] { // Would be nice to not discard the last element
 		fields := make([]string, 8)
 		for i, col := range cols {
 			fields[i] = strings.Trim(line[col.start:col.end], " ")
 		}
-		var inUse bool
-		if strings.Trim(fields[0], " ") == "*" {
-			inUse = true
-		}
+		inUse := strings.Trim(fields[0], " ")
 		ssid := strings.Trim(fields[2], " ")
-		signal, err := strconv.Atoi(fields[6])
-		if err != nil {
-			return nil, fmt.Errorf("Could not parse signal")
-		}
+		signal := strings.Trim(fields[6], " ")
 		networks = append(networks, network{inUse: inUse, ssid: ssid, signal: signal})
 	}
 	return networks, nil
 }
+
+var baseStyle = lipgloss.NewStyle().
+	BorderStyle(lipgloss.ThickBorder()).
+	BorderForeground(lipgloss.Color("240"))
