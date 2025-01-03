@@ -33,7 +33,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return a, tea.Quit
 		case "enter":
 			if a.state == STATE_SELECTING {
