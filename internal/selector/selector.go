@@ -20,7 +20,10 @@ const STATE_ERROR state = 3
 
 func New(width, height int) Model {
 	a := Model{}
-	a.table = table.New(table.WithWidth(width), table.WithHeight(height-2), table.WithFocused(true))
+	styles := table.DefaultStyles()
+	styles.Header = styles.Header.Bold(true)
+	styles.Selected = styles.Selected.Background(lipgloss.Color("57"))
+	a.table = table.New(table.WithWidth(width-2), table.WithHeight(height-3), table.WithFocused(true), table.WithStyles(styles))
 	a.spinner = spinner.New()
 	a.spinner.Spinner = spinner.Points
 	a.state = STATE_PENDING
@@ -37,15 +40,13 @@ type Model struct {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(run, m.spinner.Tick)
+	return tea.Sequence(m.spinner.Tick, run)
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "<ctrl>+c":
-			return m, tea.Quit
 		case "enter":
 			m.selected = m.table.SelectedRow()[1]
 		}
@@ -82,7 +83,7 @@ func (m Model) View() string {
 		return m.error
 	}
 	if m.state == STATE_COMPLETE {
-		return baseStyle.Render(m.table.View())
+		return baseStyle.Render(fmt.Sprintf("%s\n%s", m.table.View(), m.table.HelpView()))
 	}
 	panic("unknown state")
 }
