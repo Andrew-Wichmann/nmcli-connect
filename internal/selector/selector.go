@@ -18,9 +18,9 @@ const STATE_PENDING state = 1
 const STATE_COMPLETE state = 2
 const STATE_ERROR state = 3
 
-func New() Model {
+func New(width, height int) Model {
 	a := Model{}
-	a.table = table.New(table.WithWidth(100), table.WithHeight(50), table.WithFocused(true))
+	a.table = table.New(table.WithWidth(width), table.WithHeight(height-2), table.WithFocused(true))
 	a.spinner = spinner.New()
 	a.spinner.Spinner = spinner.Points
 	a.state = STATE_PENDING
@@ -54,7 +54,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		for i, network := range msg.networks {
 			rows[i] = table.Row{network.inUse, network.ssid, network.signal}
 		}
-		cols := []table.Column{{Title: "In Use", Width: 5}, {Title: "SSID", Width: 50}, {Title: "Signal", Width: 10}}
+		cols := []table.Column{{Title: "In Use", Width: 6}, {Title: "SSID", Width: 50}, {Title: "Signal", Width: 6}}
 		m.table.SetColumns(cols)
 		m.table.SetRows(rows)
 		m.state = STATE_COMPLETE

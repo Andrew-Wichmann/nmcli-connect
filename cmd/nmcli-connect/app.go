@@ -11,9 +11,10 @@ import (
 
 type state int
 
-const STATE_SELECTING = 1
-const STATE_PROMPT = 2
-const STATE_CONNECT = 3
+const STATE_INIT = 1
+const STATE_SELECTING = 2
+const STATE_PROMPT = 3
+const STATE_CONNECT = 4
 
 type app struct {
 	state         state
@@ -24,7 +25,7 @@ type app struct {
 }
 
 func newApp() app {
-	a := app{selector: selector.New(), state: STATE_SELECTING}
+	a := app{state: STATE_INIT}
 	return a
 }
 
@@ -34,6 +35,9 @@ func (a app) Init() tea.Cmd {
 
 func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		a.selector = selector.New(msg.Width, msg.Height)
+		a.state = STATE_SELECTING
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
@@ -64,7 +68,9 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a app) View() string {
-	if a.state == STATE_SELECTING {
+	if a.state == STATE_INIT {
+		return "Starting..."
+	} else if a.state == STATE_SELECTING {
 		return a.selector.View()
 	} else if a.state == STATE_PROMPT {
 		return a.passwordInput.View()
