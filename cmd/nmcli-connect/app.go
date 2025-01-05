@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/Andrew-Wichmann/nmcli-connect/internal/passwordinput"
 	"github.com/Andrew-Wichmann/nmcli-connect/internal/selector"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -17,7 +18,7 @@ type app struct {
 	state         state
 	ssid          string
 	selector      selector.Model
-	passwordInput passwordInput
+	passwordInput passwordinput.Model
 	connector     connector
 }
 
@@ -40,11 +41,11 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if a.state == STATE_SELECTING {
 				a.state = STATE_PROMPT
 				a.ssid = a.selector.Selected()
-				a.passwordInput = newPasswordInput(a.ssid)
+				a.passwordInput = passwordinput.New(a.ssid)
 				return a, a.passwordInput.Init()
 			} else if a.state == STATE_PROMPT {
 				a.state = STATE_CONNECT
-				password := a.passwordInput.ti.Value()
+				password := a.passwordInput.Password()
 				a.connector = newConnector(a.ssid, password)
 				return a, a.connector.Init()
 			}
