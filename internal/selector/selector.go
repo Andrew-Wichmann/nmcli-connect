@@ -1,4 +1,4 @@
-package main
+package selector
 
 import (
 	"fmt"
@@ -12,14 +12,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type selectorState int
+type state int
 
-const STATE_PENDING selectorState = 1
-const STATE_COMPLETE selectorState = 2
-const STATE_ERROR selectorState = 3
+const STATE_PENDING state = 1
+const STATE_COMPLETE state = 2
+const STATE_ERROR state = 3
 
-func newSelector() selector {
-	a := selector{}
+func New() Model {
+	a := Model{}
 	a.table = table.New(table.WithWidth(100), table.WithHeight(50), table.WithFocused(true))
 	a.spinner = spinner.New()
 	a.spinner.Spinner = spinner.Points
@@ -27,27 +27,27 @@ func newSelector() selector {
 	return a
 }
 
-type selector struct {
+type Model struct {
 	networks []network
 	error    string
 	table    table.Model
 	selected string
 	spinner  spinner.Model
-	state    selectorState
+	state    state
 }
 
-func (a selector) Init() tea.Cmd {
-	return tea.Batch(run, a.spinner.Tick)
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(run, m.spinner.Tick)
 }
 
-func (a selector) Update(msg tea.Msg) (selector, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "<ctrl>+c":
-			return a, tea.Quit
+			return m, tea.Quit
 		case "enter":
-			a.selected = a.table.SelectedRow()[1]
+			m.selected = m.table.SelectedRow()[1]
 		}
 	case nmcliSuccess:
 		rows := make([]table.Row, len(msg.networks))
@@ -55,36 +55,40 @@ func (a selector) Update(msg tea.Msg) (selector, tea.Cmd) {
 			rows[i] = table.Row{network.inUse, network.ssid, network.signal}
 		}
 		cols := []table.Column{{Title: "In Use", Width: 5}, {Title: "SSID", Width: 50}, {Title: "Signal", Width: 10}}
-		a.table.SetColumns(cols)
-		a.table.SetRows(rows)
-		a.state = STATE_COMPLETE
+		m.table.SetColumns(cols)
+		m.table.SetRows(rows)
+		m.state = STATE_COMPLETE
 	case nmcliFailed:
-		a.error = msg.err.Error()
-		a.state = STATE_ERROR
+		m.error = msg.err.Error()
+		m.state = STATE_ERROR
 	}
 	var cmd tea.Cmd
-	a.table, cmd = a.table.Update(msg)
+	m.table, cmd = m.table.Update(msg)
 	if cmd != nil {
-		return a, cmd
+		return m, cmd
 	}
-	a.spinner, cmd = a.spinner.Update(msg)
+	m.spinner, cmd = m.spinner.Update(msg)
 	if cmd != nil {
-		return a, cmd
+		return m, cmd
 	}
-	return a, cmd
+	return m, cmd
 }
 
-func (a selector) View() string {
-	if a.state == STATE_PENDING {
-		return a.spinner.View()
+func (m Model) View() string {
+	if m.state == STATE_PENDING {
+		return m.spinner.View()
 	}
-	if a.state == STATE_ERROR {
-		return a.error
+	if m.state == STATE_ERROR {
+		return m.error
 	}
-	if a.state == STATE_COMPLETE {
-		return baseStyle.Render(a.table.View())
+	if m.state == STATE_COMPLETE {
+		return baseStyle.Render(m.table.View())
 	}
 	panic("unknown state")
+}
+
+func (m Model) Selected() string {
+	return m.table.SelectedRow()[1]
 }
 
 type network struct {

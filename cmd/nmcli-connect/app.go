@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/Andrew-Wichmann/nmcli-connect/internal/selector"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -15,13 +16,13 @@ const STATE_CONNECT = 3
 type app struct {
 	state         state
 	ssid          string
-	selector      selector
+	selector      selector.Model
 	passwordInput passwordInput
 	connector     connector
 }
 
 func newApp() app {
-	a := app{selector: newSelector(), state: STATE_SELECTING}
+	a := app{selector: selector.New(), state: STATE_SELECTING}
 	return a
 }
 
@@ -38,7 +39,7 @@ func (a app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if a.state == STATE_SELECTING {
 				a.state = STATE_PROMPT
-				a.ssid = a.selector.table.SelectedRow()[1]
+				a.ssid = a.selector.Selected()
 				a.passwordInput = newPasswordInput(a.ssid)
 				return a, a.passwordInput.Init()
 			} else if a.state == STATE_PROMPT {
