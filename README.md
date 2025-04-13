@@ -2,6 +2,9 @@
 
 `nmcli-connect` is a [bubbletea](https://github.com/charmbracelet/bubbletea/) based TUI to connect to wifi networks.
 
+## Demo
+![demo](./demo.gif)
+
 ## Requirments
 This utility is intended to be used on Ubuntu with `network-manager` installed.
 
